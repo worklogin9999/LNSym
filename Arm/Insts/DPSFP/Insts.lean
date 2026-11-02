@@ -13,6 +13,7 @@ import Arm.Insts.DPSFP.Advanced_simd_scalar_shift_by_immediate
 import Arm.Insts.DPSFP.Advanced_simd_scalar_copy
 import Arm.Insts.DPSFP.Advanced_simd_table_lookup
 import Arm.Insts.DPSFP.Advanced_simd_three_same
+import Arm.Insts.DPSFP.Advanced_simd_across_lanes
 import Arm.Insts.DPSFP.Advanced_simd_three_different
 import Arm.Insts.DPSFP.Crypto_aes
 import Arm.Insts.DPSFP.Crypto_two_reg_sha512
@@ -34,6 +35,7 @@ def DPSFP.rand : List (Cosim.CosimM (Option (BitVec 32))) :=
   DPSFP.Advanced_simd_three_same_cls.rand ++
   DPSFP.Advanced_simd_three_different_cls.rand ++
   DPSFP.Advanced_simd_two_reg_misc_cls.rand ++
+  DPSFP.Advanced_simd_across_lanes_cls.rand ++
   DPSFP.Crypto_aes_cls.rand ++
   DPSFP.Crypto_three_reg_sha512_cls.rand ++
   DPSFP.Crypto_two_reg_sha512_cls.rand ++
