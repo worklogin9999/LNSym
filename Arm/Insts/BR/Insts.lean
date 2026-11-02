@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author(s): Shilpi Goel
 -/
 import Arm.Insts.BR.Compare_branch
+import Arm.Insts.BR.Test_branch
 import Arm.Insts.BR.Uncond_branch_imm
 import Arm.Insts.BR.Uncond_branch_reg
 import Arm.Insts.BR.Cond_branch_imm

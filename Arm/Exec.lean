@@ -23,6 +23,8 @@ def exec_inst (ai : ArmInst) (s : ArmState) : ArmState :=
 
   | BR (BranchInst.Compare_branch i) =>
     BR.exec_compare_branch i s
+  | BR (BranchInst.Test_branch i) =>
+    BR.exec_test_branch i s
   | BR (BranchInst.Uncond_branch_imm i) =>
     BR.exec_uncond_branch_imm i s
   | BR (BranchInst.Uncond_branch_reg i) =>
