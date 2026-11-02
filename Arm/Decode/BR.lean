@@ -23,6 +23,17 @@ deriving DecidableEq, Repr
 
 instance : ToString Compare_branch_cls where toString a := toString (repr a)
 
+structure Test_branch_cls where
+  b5     : BitVec 1               -- [31:31]
+  _fixed : BitVec 6 := 0b011011#6 -- [30:25]
+  op     : BitVec 1               -- [24:24]
+  b40    : BitVec 5               -- [23:19]
+  imm14  : BitVec 14              -- [18:5]
+  Rt     : BitVec 5               --  [4:0]
+deriving DecidableEq, Repr
+
+instance : ToString Test_branch_cls where toString a := toString (repr a)
+
 structure Uncond_branch_imm_cls where
   op     : BitVec 1              -- [31:31]
   _fixed : BitVec 5 := 0b00101#5 -- [30:26]
@@ -69,6 +80,8 @@ def Hints_cls.toBitVec32 (x : Hints_cls) : BitVec 32 :=
 inductive BranchInst where
   | Compare_branch :
     Compare_branch_cls → BranchInst
+  | Test_branch :
+    Test_branch_cls → BranchInst
   | Uncond_branch_imm :
     Uncond_branch_imm_cls → BranchInst
   | Uncond_branch_reg :
