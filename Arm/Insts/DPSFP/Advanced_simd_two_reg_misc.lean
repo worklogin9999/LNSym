@@ -10,6 +10,7 @@ import Arm.State
 import Arm.Insts.Common
 import Arm.BitVec
 import Arm.Insts.CosimM
+import Arm.Insts.DPSFP.Advanced_simd_three_same
 
 ----------------------------------------------------------------------
 
@@ -87,6 +88,10 @@ def vrev128_64_8 (x : BitVec 128) : BitVec 128 :=
     (by decide) (by decide) (by decide)
     (by decide) (by decide)
 
+/-- Population count of a byte. -/
+def popcount8 (x : BitVec 8) : BitVec 8 :=
+  BitVec.ofNat 8 ((List.range 8).countP (fun i => x.getLsbD i))
+
 @[state_simp_rules]
 def exec_advanced_simd_two_reg_misc
   (inst : Advanced_simd_two_reg_misc_cls) (s : ArmState) : ArmState :=
@@ -127,6 +132,10 @@ def exec_advanced_simd_two_reg_misc
       | 1#1, 0b00000#5 => -- REV32
           some (rev_vector datasize container_size esize operand
                h3 h0' h4 h1 h2)
+      | 0#1, 0b00101#5 => -- CNT (size = 00 only)
+          if inst.size = 0b00#2 then
+            some (binary_vector_op 8 (fun x _ => popcount8 x) operand operand)
+          else none
       | _, _ => none
     -- State Updates
     match result with
@@ -170,7 +179,18 @@ partial def Advanced_simd_two_reg_misc_cls.rev32.rand : Cosim.CosimM (Option (Bi
   else
     pure (some (inst.toBitVec32))
 
+def Advanced_simd_two_reg_misc_cls.cnt.rand : Cosim.CosimM (Option (BitVec 32)) := do
+  let (inst : Advanced_simd_two_reg_misc_cls) :=
+    { Q := ← BitVec.rand 1,
+      U := 0b0#1,
+      size := 0b00#2,
+      opcode := 0b00101#5,
+      Rn := ← BitVec.rand 5,
+      Rd := ← BitVec.rand 5 }
+  pure (some (inst.toBitVec32))
+
 /-- Generate random instructions of Advanced_simd_two_reg_misc_cls class. -/
 def Advanced_simd_two_reg_misc_cls.rand : List (Cosim.CosimM (Option (BitVec 32))) :=
   [Advanced_simd_two_reg_misc_cls.rev64_16.rand,
-   Advanced_simd_two_reg_misc_cls.rev32.rand]
+   Advanced_simd_two_reg_misc_cls.rev32.rand,
+   Advanced_simd_two_reg_misc_cls.cnt.rand]
