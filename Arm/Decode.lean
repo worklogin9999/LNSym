@@ -173,6 +173,8 @@ def decode_data_proc_sfp (i : BitVec 32) : Option ArmInst :=
     DPSFP (Advanced_simd_scalar_copy {op, imm5, imm4, Rn, Rd})
   | [0, Q:1, 001110, op2:2, 0, Rm:5, 0, len:2, op:1, 00, Rn:5, Rd:5] =>
     DPSFP (Advanced_simd_table_lookup {Q, op2, Rm, len, op, Rn, Rd})
+  | [0, Q:1, U:1, 01110, size:2, 11000, opcode:5, 10, Rn:5, Rd:5] =>
+    DPSFP (Advanced_simd_across_lanes {Q, U, size, opcode, Rn, Rd})
   | [0, Q:1, U:1, 01110, size:2, 1, Rm:5, opcode:5, 1, Rn:5, Rd:5] =>
     DPSFP (Advanced_simd_three_same {Q, U, size, Rm, opcode, Rn, Rd})
   | [0, Q:1, U:1, 01110, size:2, 1, Rm:5, opcode:4, 00, Rn:5, Rd:5] =>
@@ -356,6 +358,11 @@ example : decode_raw_inst 0b00011010000000000000000000100001#32 =
           (ArmInst.DPR (DataProcRegInst.Add_sub_carry
                { sf := 0#1, op := 0#1, S := 0#1, Rm := 0#5,
                  Rn := 1#5, Rd := 1#5 })) := rfl
+
+-- umaxv b0, v1.16b
+example : decode_raw_inst 0x6e30a820#32 =
+          (ArmInst.DPSFP (DataProcSFPInst.Advanced_simd_across_lanes
+               { Q := 1#1, U := 1#1, size := 0#2, opcode := 0b01010#5, Rn := 1#5, Rd := 0#5 })) := rfl
 
 -- sha512h q3, q5, v6.2d
 example : decode_raw_inst 0xce6680a3#32 =
