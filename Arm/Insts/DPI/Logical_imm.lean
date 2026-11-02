@@ -117,17 +117,9 @@ def exec_logical_imm (inst : Logical_imm_cls) (s : ArmState) : ArmState :=
     | none => write_err (StateError.Illegal s!"Illegal {inst} encountered!") s
     | some (imm, _) =>
       let op := decode_op inst.opc
-      let operand1 :=
-        match op with
-        | .ORR =>
-          -- (TODO): a `dsimproc` for MoveWidePreferred?
-          if  ¬ MoveWidePreferred inst.sf inst.N inst.imms inst.immr then
-             -- MOV (bitmask immediate) is an alias of ORR when
-             -- Rd == '11111' and Move Wide is not preferred.
-             read_gpr_zr datasize inst.Rn s
-          else
-            read_gpr datasize inst.Rn s
-        | _ => read_gpr datasize inst.Rn s
+      -- Operand register 31 is always ZR here (`X[n]` in the Arm ARM); only the
+      -- destination of AND/ORR/EOR may name SP.
+      let operand1 := read_gpr_zr datasize inst.Rn s
       let (result, maybe_pstate) := exec_logical_imm_op op operand1 imm
       -- State Updates
       let s'            := write_pc ((read_pc s) + 4#64) s
@@ -157,11 +149,9 @@ partial def Logical_imm_cls.inst.rand : Cosim.CosimM (Option (BitVec 32)) := do
     let immr ← BitVec.rand 6
     let opc ← BitVec.rand 2
     let op := decode_op opc
-    -- (FIXME) We do not want to read from or write to SP (GPR index 31) since
-    -- our cosimulation framework does not account for effects to SP. However,
-    -- we do want to use GPR index 31 when the semantics dictate that it be
-    -- treated as ZR.
-    let Rn_hi := if (op == .ORR ∧ ! MoveWidePreferred sf N imms immr) then 31 else 30
+    -- (FIXME) We do not want to write to SP (GPR index 31) since our
+    -- cosimulation framework does not account for effects to SP. The source
+    -- register is always read as ZR for index 31, so it may be 31.
     let Rd_hi := if (op == .ANDS) then 31 else 30
     let (inst : Logical_imm_cls) :=
       { sf    := sf,
@@ -169,7 +159,7 @@ partial def Logical_imm_cls.inst.rand : Cosim.CosimM (Option (BitVec 32)) := do
         N     := N,
         immr  := immr,
         imms  := imms,
-        Rn    := ← GPRIndex.rand (lo := 0) (hi := Rn_hi),
+        Rn    := ← GPRIndex.rand,
         Rd    := ← GPRIndex.rand (lo := 0) (hi := Rd_hi)
       }
     pure (some (inst.toBitVec32))
