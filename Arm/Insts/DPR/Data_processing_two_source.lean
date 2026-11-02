@@ -29,10 +29,24 @@ def exec_data_processing_shift
   let s := write_pc ((read_pc s) + 4#64) s
   s
 
+/-- UDIV: unsigned divide, zero divisor gives zero. -/
+@[state_simp_rules]
+def exec_data_processing_udiv
+  (inst : Data_processing_two_source_cls) (s : ArmState) : ArmState :=
+  let datasize := 32 <<< inst.sf.toNat
+  let operand1 := read_gpr_zr datasize inst.Rn s
+  let operand2 := read_gpr_zr datasize inst.Rm s
+  let result := if operand2 = 0 then 0 else operand1 / operand2
+  let s := write_gpr_zr datasize inst.Rd result s
+  let s := write_pc ((read_pc s) + 4#64) s
+  s
+
 @[state_simp_rules]
 def exec_data_processing_two_source
   (inst : Data_processing_two_source_cls) (s : ArmState) : ArmState :=
   match inst.S, inst.opcode with
+  | 0b0#1, 0b000010#6 -- UDIV 32-, 64-bit
+    => exec_data_processing_udiv inst s
   | 0b0#1, 0b001000#6 -- LSLV 32-, 64-bit
   | 0b0#1, 0b001001#6 -- LSRV 32-, 64-bit
   | 0b0#1, 0b001010#6 -- ASRV 32-, 64-bit
@@ -42,7 +56,7 @@ def exec_data_processing_two_source
 
 ----------------------------------------------------------------------
 
-def Data_processing_two_source_cls.shift.rand
+def Data_processing_two_source_cls.inst.rand
   (opcode : BitVec 6) : Cosim.CosimM (Option (BitVec 32)) := do
   let (inst : Data_processing_two_source_cls) :=
     { sf := ← BitVec.rand 1,
@@ -56,10 +70,11 @@ def Data_processing_two_source_cls.shift.rand
 
 /-- Generate random instructions of Data_processing_two_source_cls class. -/
 def Data_processing_two_source_cls.rand : List (Cosim.CosimM (Option (BitVec 32))) :=
-  [ Data_processing_two_source_cls.shift.rand 0b001000#6,
-    Data_processing_two_source_cls.shift.rand 0b001001#6,
-    Data_processing_two_source_cls.shift.rand 0b001010#6,
-    Data_processing_two_source_cls.shift.rand 0b001011#6
+  [ Data_processing_two_source_cls.inst.rand 0b000010#6, -- UDIV
+    Data_processing_two_source_cls.inst.rand 0b001000#6,
+    Data_processing_two_source_cls.inst.rand 0b001001#6,
+    Data_processing_two_source_cls.inst.rand 0b001010#6,
+    Data_processing_two_source_cls.inst.rand 0b001011#6
   ]
 
 end DPR
