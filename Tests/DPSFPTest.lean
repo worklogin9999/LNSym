@@ -58,4 +58,18 @@ example : simd1 0x4e205820#32 0x810ff01155aa80ff7f3f1f0f07030100#128 = 0x0204040
 example : simd1 0x0e205820#32 0x810ff01155aa80ff7f3f1f0f07030100#128 = 0x00000000000000000706050403020100#128 := by
   native_decide
 
+----------------------------------------------------------------------
+-- UMAXV / UMINV: the scalar result lands in the low lane, the rest is zero.
+-- v1 lanes (byte 0 first): 01 02 03 04 05 06 07 08 f1 0a 0b 0c 0d 0e 0f 10
+
+def umv : BitVec 128 := 0x100f0e0d0c0b0af10807060504030201#128
+
+example : simd1 0x6e30a820#32 umv = 0xf1#128 := by native_decide         -- umaxv b0, v1.16b
+example : simd1 0x6e31a820#32 umv = 0x01#128 := by native_decide         -- uminv b0, v1.16b
+example : simd1 0x2e30a820#32 umv = 0x08#128 := by native_decide         -- umaxv b0, v1.8b
+example : simd1 0x6e71a820#32 umv = 0x0201#128 := by native_decide       -- uminv h0, v1.8h
+example : simd1 0x2e70a820#32 umv = 0x0807#128 := by native_decide       -- umaxv h0, v1.4h
+example : simd1 0x6eb0a820#32 umv = 0x100f0e0d#128 := by native_decide   -- umaxv s0, v1.4s
+example : simd1 0x6eb1a820#32 umv = 0x04030201#128 := by native_decide   -- uminv s0, v1.4s
+
 end DPSFPTest
