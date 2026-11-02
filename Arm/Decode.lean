@@ -118,6 +118,8 @@ def decode_data_proc_reg (i : BitVec 32) : Option ArmInst :=
     DPR (Add_sub_carry {sf, op, S, Rm, Rn, Rd})
   | [sf:1, op:1, S:1, 01011, shift:2, 0, Rm:5, imm6:6 , Rn:5, Rd:5] =>
     DPR (Add_sub_shifted_reg {sf, op, S, shift, Rm, imm6, Rn, Rd})
+  | [sf:1, op:1, S:1, 01011, opt:2, 1, Rm:5, option:3, imm3:3, Rn:5, Rd:5] =>
+    DPR (Add_sub_extended_reg {sf, op, S, opt, Rm, option, imm3, Rn, Rd})
   | [sf:1, op:1, S:1, 11010100, Rm:5, cond:4, op2:2, Rn:5, Rd:5] =>
     DPR (Conditional_select {sf, op, S, Rm, cond, op2, Rn, Rd})
   | [sf:1, 1, S:1, 11010110, opcode2:5, opcode:6, Rn:5, Rd:5] =>
@@ -364,6 +366,12 @@ example : decode_raw_inst 0x91000421#32 =
 example : decode_raw_inst 0xb747ffe1#32 =
           (ArmInst.BR (BranchInst.Test_branch
                { b5 := 1#1, op := 1#1, b40 := 8#5, imm14 := 0x3fff#14, Rt := 1#5 })) := rfl
+
+-- add x8, x27, x0, lsl #3
+example : decode_raw_inst 0x8b206f68#32 =
+          (ArmInst.DPR (DataProcRegInst.Add_sub_extended_reg
+               { sf := 1#1, op := 0#1, S := 0#1, opt := 0#2, Rm := 0#5, option := 0b011#3,
+                 imm3 := 3#3, Rn := 27#5, Rd := 8#5 })) := rfl
 
 -- adc x1, x1, x0
 example : decode_raw_inst 0b00011010000000000000000000100001#32 =
