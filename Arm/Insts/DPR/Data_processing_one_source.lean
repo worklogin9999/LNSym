@@ -86,10 +86,40 @@ def exec_data_processing_rev
     let s := write_pc ((read_pc s) + 4#64) s
     s
 
+/-- RBIT: reverse the bit order of the operand. -/
+@[state_simp_rules]
+def exec_data_processing_rbit
+  (inst : Data_processing_one_source_cls) (s : ArmState) : ArmState :=
+  let datasize := 32 <<< inst.sf.toNat
+  let operand := read_gpr_zr datasize inst.Rn s
+  let result := BitVec.reverse operand
+  let s := write_gpr_zr datasize inst.Rd result s
+  let s := write_pc ((read_pc s) + 4#64) s
+  s
+
+/-- Number of leading zero bits of `x`: `n` for zero, otherwise `n - 1 - log2 x`. -/
+def clz_nat (x : BitVec n) : Nat :=
+  if x.toNat = 0 then n else n - (Nat.log2 x.toNat + 1)
+
+/-- CLZ: count leading zeros. -/
+@[state_simp_rules]
+def exec_data_processing_clz
+  (inst : Data_processing_one_source_cls) (s : ArmState) : ArmState :=
+  let datasize := 32 <<< inst.sf.toNat
+  let operand := read_gpr_zr datasize inst.Rn s
+  let result := BitVec.ofNat datasize (clz_nat operand)
+  let s := write_gpr_zr datasize inst.Rd result s
+  let s := write_pc ((read_pc s) + 4#64) s
+  s
+
 @[state_simp_rules]
 def exec_data_processing_one_source
   (inst : Data_processing_one_source_cls) (s : ArmState) : ArmState :=
   match inst.sf, inst.S, inst.opcode2, inst.opcode with
+  | _, 0#1, 0b00000#5, 0b000000#6 -- RBIT
+    => exec_data_processing_rbit inst s
+  | _, 0#1, 0b00000#5, 0b000100#6 -- CLZ
+    => exec_data_processing_clz inst s
   | 0#1, 0#1, 0b00000#5, 0b000001#6 -- REV16 - 32-bit
   | 0#1, 0#1, 0b00000#5, 0b000010#6 -- REV - 32-bit
   | 1#1, 0#1, 0b00000#5, 0b000001#6 -- REV16 - 64-bit
@@ -100,11 +130,12 @@ def exec_data_processing_one_source
 
 ----------------------------------------------------------------------
 
+/-- RBIT, REV16, REV32, REV. -/
 partial def Data_processing_one_source_cls.rev_all.rand : Cosim.CosimM (Option (BitVec 32)) := do
   let opc := ← BitVec.rand 2
   let sf := ← BitVec.rand 1
-  -- When opc == 0b00#2, inst is instruction RBIT, RBIT is not modeled currently
-  if opc == 0b00#2 || opc == 0b11#2 && sf == 0b0#1 then
+  -- opcode 0b000011 (REV) is 64-bit only.
+  if opc == 0b11#2 && sf == 0b0#1 then
     Data_processing_one_source_cls.rev_all.rand
   else
     let (inst : Data_processing_one_source_cls) :=
@@ -117,8 +148,20 @@ partial def Data_processing_one_source_cls.rev_all.rand : Cosim.CosimM (Option (
       }
     pure (some (inst.toBitVec32))
 
+def Data_processing_one_source_cls.clz.rand : Cosim.CosimM (Option (BitVec 32)) := do
+  let (inst : Data_processing_one_source_cls) :=
+    { sf := ← BitVec.rand 1,
+      S := 0b0#1,
+      opcode2 := 0b00000#5,
+      opcode := 0b000100#6,
+      Rn := ← GPRIndex.rand,
+      Rd := ← GPRIndex.rand
+    }
+  pure (some (inst.toBitVec32))
+
 /-- Generate random instructions of Data_processing_one_source_cls class. -/
-def Data_processing_one_source_cls.rand : Cosim.CosimM (Option (BitVec 32)) :=
-  Data_processing_one_source_cls.rev_all.rand
+def Data_processing_one_source_cls.rand : List (Cosim.CosimM (Option (BitVec 32))) :=
+  [ Data_processing_one_source_cls.rev_all.rand,
+    Data_processing_one_source_cls.clz.rand ]
 
 end DPR
