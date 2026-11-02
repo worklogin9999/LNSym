@@ -11,6 +11,7 @@ import «Tests».SHA2.SHA512ProgramTest
 import «Tests».LDSTTest
 import «Tests».BranchTest
 import «Tests».DPRTest
+import «Tests».DPSFPTest
 import «Tests».«AES-GCM».AESSpecTest
 import «Tests».«AES-GCM».AESGCMSpecTest
 import «Tests».«AES-GCM».GCMProgramTests
