@@ -224,6 +224,8 @@ def decode_ldst_inst (i : BitVec 32) : Option ArmInst :=
     LDST (Reg_imm_post_indexed {size, V, opc, imm9, Rn, Rt})
   | [size:2, 111, V:1, 01, opc:2, imm12:12, Rn:5, Rt:5] =>
     LDST (Reg_unsigned_imm {size, V, opc, imm12, Rn, Rt})
+  | [size:2, 111, V:1, 00, opc:2, 1, Rm:5, option:3, S:1, 10, Rn:5, Rt:5] =>
+    LDST (Reg_reg_offset {size, V, opc, Rm, option, S, Rn, Rt})
   | [size:2, 111, VR:1, 00, opc:2, 0, imm9:9, 00, Rn:5, Rt:5] =>
     LDST (Reg_unscaled_imm {size, VR, opc, imm9, Rn, Rt})
   | [opc:2, 101, V:1, 011, L:1, imm7:7, Rt2:5, Rn:5, Rt:5] =>
@@ -265,6 +267,11 @@ def LDST.mayModifiedRegs (i : BitVec 32) : Except Format (List RegType) :=
     | LDST (Reg_unsigned_imm x) =>
       -- Similar to `Reg_imm_post_indexed`, except that `wback` is `false`,
       -- which means that `x.Rn` isn't updated.
+      if (getLsbD x.opc 0) then .ok [] -- Load
+      else if x.V = 1#1 then -- Store and SIMD
+        .ok [(.SFP x.Rt)]
+      else .ok [(.GPR x.Rt)] -- Store and non-SIMD
+    | LDST (Reg_reg_offset x) =>
       if (getLsbD x.opc 0) then .ok [] -- Load
       else if x.V = 1#1 then -- Store and SIMD
         .ok [(.SFP x.Rt)]
@@ -385,6 +392,12 @@ example : decode_raw_inst 0x3cc10410#32 =
           (ArmInst.LDST (LDSTInst.Reg_imm_post_indexed
                { size := 0x0#2, V := 0x1#1, opc := 0x3#2, imm9 := 0x010#9,
                  Rn := 0x00#5, Rt := 0x10#5 })) := rfl
+
+-- ldr	w0, [x1, w2, uxtw #2]
+example : decode_raw_inst 0xb8625820#32 =
+          (ArmInst.LDST (LDSTInst.Reg_reg_offset
+               { size := 0x2#2, V := 0x0#1, opc := 0x1#2, Rm := 0x02#5, option := 0x2#3,
+                 S := 0x1#1, Rn := 0x01#5, Rt := 0x00#5 })) := rfl
 
 -- stp	x29, x30, [sp, #-16]!
 example : decode_raw_inst 0xa9bf7bfd#32 =
