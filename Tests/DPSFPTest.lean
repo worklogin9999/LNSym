@@ -48,4 +48,14 @@ example : simd2 0x6ee24420#32 0x80000000000000018000000000000001#128 0x000000000
 example : simd2 0x6e624420#32 0x80018001800180018001800180018001#128 0xff010100fff0fff1ffff0010000f0000#128 =
           0x00028001000000014000000080008001#128 := by native_decide
 
+----------------------------------------------------------------------
+-- CNT: per-byte population count
+
+-- cnt v0.16b, v1.16b
+example : simd1 0x4e205820#32 0x810ff01155aa80ff7f3f1f0f07030100#128 = 0x02040402040401080706050403020100#128 := by
+  native_decide
+-- cnt v0.8b, v1.8b: upper half cleared
+example : simd1 0x0e205820#32 0x810ff01155aa80ff7f3f1f0f07030100#128 = 0x00000000000000000706050403020100#128 := by
+  native_decide
+
 end DPSFPTest
