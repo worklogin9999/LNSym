@@ -107,6 +107,26 @@ def exec_logic_vector (inst : Advanced_simd_three_same_cls) (s : ArmState) : Arm
   let s := write_sfp datasize inst.Rd result s
   s
 
+/-- One lane of USHL: shift left by the signed low byte of the shift operand;
+negative amounts shift right (logically). -/
+@[state_simp_rules]
+def ushl_elem (esize : Nat) (x sh : BitVec esize) : BitVec esize :=
+  let amount := (BitVec.extractLsb' 0 8 sh).toInt
+  if amount ≥ 0 then x <<< amount.toNat else BitVec.ushiftRight x (-amount).toNat
+
+/-- USHL (vector): per-lane variable shift. -/
+@[state_simp_rules]
+def exec_ushl_vector (inst : Advanced_simd_three_same_cls) (s : ArmState) : ArmState :=
+  if inst.size = 0b11#2 ∧ inst.Q = 0b0#1 then
+    write_err (StateError.Illegal s!"Illegal {inst} encountered!") s
+  else
+    let datasize := if inst.Q = 1#1 then 128 else 64
+    let esize := 8 <<< (BitVec.toNat inst.size)
+    let operand1 := read_sfp datasize inst.Rn s
+    let operand2 := read_sfp datasize inst.Rm s
+    let result := binary_vector_op esize (ushl_elem esize) operand1 operand2
+    write_sfp datasize inst.Rd result s
+
 @[state_simp_rules]
 def exec_advanced_simd_three_same
   (inst : Advanced_simd_three_same_cls) (s : ArmState) : ArmState :=
@@ -115,6 +135,8 @@ def exec_advanced_simd_three_same
     match inst.opcode with
     | 0b10000#5 => exec_binary_vector inst s
     | 0b00011#5 => exec_logic_vector inst s
+    | 0b01000#5 => if inst.U = 1#1 then exec_ushl_vector inst s
+                   else write_err (StateError.Unimplemented s!"Unsupported instruction {inst} encountered!") s
     | _ =>
       write_err (StateError.Unimplemented s!"Unsupported instruction {inst} encountered!") s
   write_pc ((read_pc s) + 4#64) s
@@ -133,6 +155,9 @@ theorem pc_of_exec_advanced_simd_three_same
   split
   · split <;> simp only [state_simp_rules, minimal_theory]
   · simp only [state_simp_rules, minimal_theory]
+  · split
+    · simp only [exec_ushl_vector]; split <;> simp only [state_simp_rules, minimal_theory]
+    · simp only [state_simp_rules, minimal_theory]
   · simp only [state_simp_rules, minimal_theory]
 
 ----------------------------------------------------------------------
@@ -161,9 +186,23 @@ def Advanced_simd_three_same_cls.logic.rand : Cosim.CosimM (Option (BitVec 32)) 
       Rd := ← BitVec.rand 5 }
   pure (inst.toBitVec32)
 
+def Advanced_simd_three_same_cls.ushl.rand : Cosim.CosimM (Option (BitVec 32)) := do
+  let Q := ← BitVec.rand 1
+  let size := ← if Q = 0#1 then BitVec.rand 2 (lo := 0) (hi := 2) else BitVec.rand 2
+  let inst : Advanced_simd_three_same_cls :=
+    { Q := Q,
+      U := 1#1,
+      size := size,
+      Rm := ← BitVec.rand 5,
+      opcode := 0b01000#5,
+      Rn := ← BitVec.rand 5,
+      Rd := ← BitVec.rand 5 }
+  pure (inst.toBitVec32)
+
 /-- Generate random instructions of Advanced_simd_three_same class. -/
 def Advanced_simd_three_same_cls.rand : List (Cosim.CosimM (Option (BitVec 32))) :=
   [ Advanced_simd_three_same_cls.binary.rand,
-    Advanced_simd_three_same_cls.logic.rand ]
+    Advanced_simd_three_same_cls.logic.rand,
+    Advanced_simd_three_same_cls.ushl.rand ]
 
 end DPSFP
