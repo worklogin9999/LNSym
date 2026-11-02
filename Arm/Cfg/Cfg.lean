@@ -211,6 +211,12 @@ protected def addArmInstToCfg (pc : BitVec 64) (raw_inst : BitVec 32)
             (fun state => BR.Compare_branch_inst.condition_holds inst state)
         (false, BrOrg pc condition_holds,
                 [Seq default_to_pc, BrTgt branch_taken_pc condition_holds])
+      | Test_branch inst => -- TBZ, TBNZ
+        let branch_taken_pc := BR.Test_branch_inst.branch_taken_pc inst pc
+        let (condition_holds : CondHoldsFn) :=
+            (fun state => BR.Test_branch_inst.condition_holds inst state)
+        (false, BrOrg pc condition_holds,
+                [Seq default_to_pc, BrTgt branch_taken_pc condition_holds])
       | Uncond_branch_imm inst => -- B, BL
         let branch_taken_pc := BR.Uncond_branch_imm_inst.branch_taken_pc inst pc
         -- These are unconditional branch instructions; we do not add

@@ -86,6 +86,8 @@ def decode_branch (i : BitVec 32) : Option ArmInst :=
   match_bv i with
   | [sf:1, 011010, op:1, imm19:19, Rt:5] =>
     BR (Compare_branch {sf, op, imm19, Rt})
+  | [b5:1, 011011, op:1, b40:5, imm14:14, Rt:5] =>
+    BR (Test_branch {b5, op, b40, imm14, Rt})
   | [op:1, 00101, imm26:26] =>
     BR (Uncond_branch_imm {op, imm26})
   | [1101011, opc:4, op2:5, op3:6, Rn:5, op4:5] =>
@@ -350,6 +352,11 @@ example : decode_raw_inst 0x91000421#32 =
           (ArmInst.DPI (DataProcImmInst.Add_sub_imm
           {sf := 1#1, op := 0#1, S := 0#1, sh := 0#1,
             imm12 := 1#12, Rn := 1#5, Rd := 1#5})) := rfl
+
+-- tbnz x1, #40, #-4
+example : decode_raw_inst 0xb747ffe1#32 =
+          (ArmInst.BR (BranchInst.Test_branch
+               { b5 := 1#1, op := 1#1, b40 := 8#5, imm14 := 0x3fff#14, Rt := 1#5 })) := rfl
 
 -- adc x1, x1, x0
 example : decode_raw_inst 0b00011010000000000000000000100001#32 =
